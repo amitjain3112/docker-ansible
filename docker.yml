@@ -1,0 +1,29 @@
+--- #This playbook installs docker containers & install nginx server inside container
+- hosts: myhost
+  user: ansible
+  become_method: sudo
+  sudo: yes
+  gather_facts: yes
+  tasks:
+  - name: Install docker package
+    yum: name=docker state=latest
+    notify:
+    - restart docker
+  - name: Ensure docker is running
+    service: name=docker state=started
+  - name: Create source directory to install docker image
+    file: path=/home/ansible/src/docker/demo state=directory owner=ansible group=ansible mode=0755
+  - name: Install docker.py
+    pip: name={{item}} state=present
+    with_items:
+         - 'docker-py>=1.7.0'
+         - 'docker-compose>=1.7.0'
+  - name: change dir to docker source
+    command: cd /home/ansible/src/docker/demo
+  - name: Pull Apline Linux Container (library/alpine:latest)
+    docker_image: name=alpine state=present
+  - name: create docker container
+    docker_container: name=mycontainer1 image=docker.io/alpine state=present detach=false command="apk add --no-cache nginx;which nginx"
+  handlers:
+    - name: restart docker
+      service: name=docker start=restarted
